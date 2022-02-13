@@ -81,7 +81,7 @@ def train_model_v1(data, shared_dim, hidden_dim, learning_rate=1e-4, epochs=1000
                 write_PCC_summary(writer, epoch, z_1, z_2, epsilon, omega, 1000)
 
 
-def train_model_v2(data, batch_size, shared_dim, hidden_dim, pca_dim, hidden_layers=1, learning_rate=1e-4, epochs=20000):
+def train_model_v2(data, batch_size, shared_dim, hidden_dim, pca_dim, desc, hidden_layers=1, learning_rate=1e-4, epochs=100000):
     channels, samples = data[0].shape
     num_batches = samples//batch_size
 
@@ -92,15 +92,11 @@ def train_model_v2(data, batch_size, shared_dim, hidden_dim, pca_dim, hidden_lay
     y_1 = tf.convert_to_tensor(tmp_1, dtype=tf.float32)
     y_2 = tf.convert_to_tensor(tmp_2, dtype=tf.float32)
 
-    print(f'SHAPE DATA y_1, y_2 {tf.shape(y_1)} {tf.shape(y_2)}')
-    #import matplotlib.pyplot as plt
-    #plt.imshow(y_1[0, 0].numpy().reshape(14, 14))
-    #plt.show()
-
     lambda_reg = 1e-10
     lambda_cmplx = 0
 
-    LOGPATH = f'{os.getcwd()}/LOG/MNIST'
+    LOGPATH = f'{os.getcwd()}/LOG/{desc}'
+    MODELSPATH = f'{os.getcwd()}/MODELS/{desc}'
     writer = create_grid_writer(root_dir=LOGPATH, params=['Shared Dim', shared_dim, 'Batch Size', batch_size])
     optimizer = tf.keras.optimizers.Adam(learning_rate)
     model = build_nmca_model(hidden_dim=hidden_dim, channels=channels, hidden_layers=hidden_layers)
@@ -152,5 +148,13 @@ def train_model_v2(data, batch_size, shared_dim, hidden_dim, pca_dim, hidden_lay
             write_scalar_summary(
                 writer=writer,
                 epoch=epoch,
-                list_of_tuples = static_part + dynamic_part
+                list_of_tuples=static_part + dynamic_part
             )
+
+    try:
+        os.makedirs(MODELSPATH)
+    except FileExistsError:
+        print('MODELS PATH exists, saving data.')
+    finally:
+        model.save(f'{MODELSPATH}/SharedDim-{shared_dim}-BatchSize-{batch_size}.tf',
+                   overwrite=False)
